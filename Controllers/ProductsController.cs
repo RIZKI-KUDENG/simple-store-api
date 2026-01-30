@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SimpleStoreApi.Data;
 using SimpleStoreApi.Models;
+using SimpleStoreApi.Services;
 
 
 namespace SimpleStoreApi.Controllers;
@@ -10,49 +9,48 @@ namespace SimpleStoreApi.Controllers;
 [ApiController]
 public class ProductsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ProductsService _service;
 
-    public ProductsController(AppDbContext context)
+    public ProductsController(ProductsService service)
     {
-        _context = context;
+        _service = service;
     }
 
-    [HttpGet]
+[HttpGet]
     public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
     {
-        return await _context.Products.Include(p => p.Category).ToListAsync();
+        var products = await _service.GetAll();
+        return Ok(products);
     }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<Product>> GetProduct(int id)
     {
-        var product = await _context.Products
-        .Include(p => p.Category)
-        .FirstOrDefaultAsync(p => p.Id == id);
-        if (product == null)
-        {
-            return NotFound();
-        }
-
-        return product;
+        var product = await _service.Get(id);
+        if (product == null) return NotFound(); 
+        return Ok(product);
     }
+
     [HttpPost]
     public async Task<ActionResult<Product>> PostProduct(Product product)
     {
-        var categoryExisting = await _context.Categories.AnyAsync(c => c.Id == product.CategoryId);
-        if (!categoryExisting) return BadRequest("Category tidak ditemukan");
 
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+        var result = await _service.Add(product);
+        
+        if (result == null) 
+        {
+            return BadRequest("Category ID tidak ditemukan");
+        }
+
+        return CreatedAtAction(nameof(GetProduct), new { id = result.Id }, result);
     }
 
-    [HttpDelete("id")]
-    public async Task<ActionResult<Product>> DeleteProduct(int id)
+    [HttpDelete("{id}")] 
+    public async Task<IActionResult> DeleteProduct(int id)
     {
-        var product = await _context.Products.FindAsync(id);
-        if (product == null) return NotFound();
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-        return product;
+        var isDeleted = await _service.Delete(id);
+        if (!isDeleted) return NotFound();
+        
+        return NoContent(); 
     }
 }

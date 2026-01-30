@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SimpleStoreApi.Data;
 using SimpleStoreApi.Models;
+using SimpleStoreApi.Services;
 
 namespace SimpleStoreApi.Controllers;
 
@@ -10,47 +9,45 @@ namespace SimpleStoreApi.Controllers;
 
 public class CategoryController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly CategoryService _service;
 
-    public CategoryController(AppDbContext context)
+    public CategoryController(CategoryService service)
     {
-        _context = context;
+        _service = service;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
     {
-        return await _context.Categories.ToListAsync();
+        var categories = await _service.GetAll();
+        return Ok(categories);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<Category>> GetCategory(int id)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _service.Get(id);
         if (category == null)
         {
             return NotFound();
         }
-        return category;
+        return Ok(category);
     }
 
     [HttpPost]
     public async Task<ActionResult<Category>> PostCategory(Category category)
     {
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction("GetCategory", new { id = category.Id }, category);
+        var newCategory = await _service.Add(category);
+        return CreatedAtAction(nameof(GetCategory), new { id = newCategory.Id }, newCategory);
     }
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
-        var category = await _context.Categories.FindAsync(id);
-        if (category == null)
+        var isDeleted = await _service.Delete(id);
+        if (!isDeleted)
         {
             return NotFound();
         }
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
         return NoContent();
     }
 }

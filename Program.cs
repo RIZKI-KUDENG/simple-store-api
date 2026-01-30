@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using SimpleStoreApi.Data;
+using SimpleStoreApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+builder.Services.AddScoped<ProductsService>();
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
